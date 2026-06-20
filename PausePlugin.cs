@@ -15,7 +15,7 @@ namespace CS2ChatPause;
 public class PausePlugin : BasePlugin
 {
     public override string ModuleName => "CS2 Chat Pause";
-    public override string ModuleVersion => "0.1.2";
+    public override string ModuleVersion => "0.1.3";
     public override string ModuleAuthor => "XBribo(๑•.•๑)";
 
     //* Admin permission required for technical pause commands

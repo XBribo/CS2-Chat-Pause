@@ -39,8 +39,7 @@ public class PauseController
 
     public bool IsPaused => Kind != PauseKind.None;
 
-    // Requests a tactical pause; the countdown starts only once the match
-    // actually freezes (next round if issued mid-round)
+    // Requests a tactical pause
     public void StartTactical(CsTeam team)
     {
         Kind = PauseKind.Tactical;
@@ -93,7 +92,6 @@ public class PauseController
     // Unpauses the match and clears all pause state and timers
     public void Resume()
     {
-        //* Guard against double-resume (manual .un racing the auto countdown)
         if (Kind == PauseKind.None) return;
 
         Server.ExecuteCommand("mp_unpause_match");

@@ -3,7 +3,7 @@ using CounterStrikeSharp.API.Modules.Utils;
 namespace CS2ChatPause;
 
 
-// Tracks remaining tactical timeouts per side, swaps counts on half change, and resets to one on each overtime period.
+// Tracks remaining tactical timeouts by stable logical team
 public class TimeoutTracker
 {
     //* Default tactical timeouts per team in regulation
@@ -12,86 +12,61 @@ public class TimeoutTracker
     //* Tactical timeouts granted to each team per overtime period
     public const int OvertimeTimeouts = 1;
 
-    private int _ctTimeouts;
-    private int _tTimeouts;
+    //* Timeouts of the team that started the match on CT
+    private int _startCtTimeouts;
+
+    //* Timeouts of the team that started the match on T
+    private int _startTTimeouts;
 
     //* Last seen overtime index (0 = regulation); used to detect new overtimes
-    private int _lastOvertime = -1;
+    private int _lastOvertime;
 
-    //* Last seen half parity; used to detect side swaps at halftime
-    private bool _initialized;
-    private bool _secondHalfParity;
+    //* True when physical sides are currently swapped from their match-start orientation
+    private bool _sidesSwapped;
 
     // Resets the ledger for a brand new match
     public void ResetForMatch()
     {
-        _ctTimeouts = RegulationTimeouts;
-        _tTimeouts = RegulationTimeouts;
+        _startCtTimeouts = RegulationTimeouts;
+        _startTTimeouts = RegulationTimeouts;
         _lastOvertime = 0;
-        _initialized = false;
+        _sidesSwapped = false;
     }
 
-    // Returns remaining timeouts for the given side
-    public int Remaining(CsTeam team)
-    {
-        return team == CsTeam.CounterTerrorist ? _ctTimeouts : _tTimeouts;
-    }
+    // True when the given physical side currently holds the team that started on CT
+    private bool HoldsStartCtTeam(CsTeam team) => (team == CsTeam.CounterTerrorist) != _sidesSwapped;
 
-    // True when the given side still has at least one tactical timeout left
+    // Returns remaining timeouts for the given physical side
+    public int Remaining(CsTeam team) => HoldsStartCtTeam(team) ? _startCtTimeouts : _startTTimeouts;
+
+    // True when the given physical side still has at least one tactical timeout left
     public bool HasTimeout(CsTeam team) => Remaining(team) > 0;
 
-    // Consumes one timeout for the side; returns false when none remain
+    // Consumes one timeout for the physical side; returns false when none remain
     public bool TryConsume(CsTeam team)
     {
         if (!HasTimeout(team)) return false;
 
-        if (team == CsTeam.CounterTerrorist) _ctTimeouts--;
-        else _tTimeouts--;
+        if (HoldsStartCtTeam(team)) _startCtTimeouts--;
+        else _startTTimeouts--;
         return true;
-    }
-
-    // Swaps the two side counters so counts follow teams across a side switch
-    private void SwapSides()
-    {
-        (_ctTimeouts, _tTimeouts) = (_tTimeouts, _ctTimeouts);
     }
 
     // Reconciles ledger with the current round state once per round start
     public void SyncRoundState(int roundsPlayed, int maxRounds, int overtimePlaying, int otMaxRounds)
     {
-        //! New overtime period: reset both teams to one and skip swap logic
+        //! New overtime period: refill both teams to one
         if (overtimePlaying > _lastOvertime)
         {
             _lastOvertime = overtimePlaying;
-            _ctTimeouts = OvertimeTimeouts;
-            _tTimeouts = OvertimeTimeouts;
-            _initialized = true;
-            _secondHalfParity = IsSecondHalf(roundsPlayed, maxRounds, overtimePlaying, otMaxRounds);
-            return;
+            _startCtTimeouts = OvertimeTimeouts;
+            _startTTimeouts = OvertimeTimeouts;
         }
 
-        bool secondHalf = IsSecondHalf(roundsPlayed, maxRounds, overtimePlaying, otMaxRounds);
-
-        //* First sync of this phase just records parity without swapping
-        if (!_initialized)
-        {
-            _initialized = true;
-            _secondHalfParity = secondHalf;
-            return;
-        }
-
-        // Parity flipped means a side switch happened; move counts with the teams
-        if (secondHalf != _secondHalfParity)
-        {
-            SwapSides();
-            _secondHalfParity = secondHalf;
-        }
+        //* Stateless mapping: recompute swap state from engine data every round so it self-corrects
+        _sidesSwapped = IsSecondHalf(roundsPlayed, maxRounds, overtimePlaying, otMaxRounds);
     }
 
-    /**
-     * Determines whether the current round belongs to the second half of its
-     * phase. In regulation the swap is at maxRounds/2; in overtime at otMax/2.
-     */
     private static bool IsSecondHalf(int roundsPlayed, int maxRounds, int overtimePlaying, int otMaxRounds)
     {
         if (overtimePlaying <= 0)
@@ -107,5 +82,3 @@ public class TimeoutTracker
         return otHalf > 0 && intoOt >= otHalf;
     }
 }
-
-
