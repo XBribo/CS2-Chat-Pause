@@ -191,7 +191,7 @@ public class PausePlugin : BasePlugin
     }
 
     //* Chat prefix shown before every plugin message
-    private static string Tag => $" {ChatColors.Green}[暂停]{ChatColors.Default} ";
+    private static string Tag => $" [{ChatColors.Green}Pause{ChatColors.Default}] ";
 }
 
 
