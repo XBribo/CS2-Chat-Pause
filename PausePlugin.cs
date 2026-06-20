@@ -32,6 +32,9 @@ public class PausePlugin : BasePlugin
         AddCommandListener("say", OnSay);
         AddCommandListener("say_team", OnSay);
 
+        // Reliable per-map reset: fires on every new map / match reload
+        RegisterListener<Listeners.OnMapStart>(_ => _tracker.ResetForMatch());
+
         // Sync timeout ledger with halftime / overtime transitions
         RegisterEventHandler<EventRoundAnnounceMatchStart>(OnMatchStart);
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
@@ -149,7 +152,7 @@ public class PausePlugin : BasePlugin
         }
 
         _pause.Resume();
-        Server.PrintToChatAll($"{Tag}战术暂停已解除,比赛继续");
+        Server.PrintToChatAll($"{Tag}暂停已解除");
     }
 
     // .tech: start an unlimited technical pause (admins only)
