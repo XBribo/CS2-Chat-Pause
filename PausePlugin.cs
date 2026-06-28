@@ -146,7 +146,7 @@ public class PausePlugin : BasePlugin
     {
         if (_pause.Kind != PauseKind.Tactical)
         {
-            string hint = _pause.Kind == PauseKind.Technical ? "当前是技术暂停,请用 .untech 解除" : "当前没有战术暂停";
+            string hint = _pause.Kind == PauseKind.Technical ? "当前是技术暂停,请用 .untech 解除" : "当前没有暂停";
             player.PrintToChat($"{Tag}{hint}");
             return;
         }
